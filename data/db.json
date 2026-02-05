@@ -1,5 +1,13 @@
 {
-  "users": [],
+  "users": [
+    {
+      "id": "u_8e6424a03b2d9819c2db0f7fe",
+      "email": "admin@example.com",
+      "passwordHash": "$2a$10$tO2QUV.YcR0CpjUDZS2yEeH3oU11N71vX79l/i3GFx46/fGWIiqYC",
+      "role": "admin",
+      "createdAt": "2026-02-05T12:04:58.494Z"
+    }
+  ],
   "events": [],
   "assignments": []
 }
