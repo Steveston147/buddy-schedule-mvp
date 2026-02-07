@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { setSessionToken } from "@/lib/clientSession";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -19,32 +18,28 @@ export default function LoginForm() {
     setLoading(true);
     setErr(null);
 
-    let res: Response;
-    try {
-      res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password })
-      });
-    } catch {
-      setLoading(false);
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    }).catch(() => null);
+
+    setLoading(false);
+
+    if (!res) {
       setErr("ネットワークエラーが発生しました");
       return;
     }
 
-    setLoading(false);
-
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({} as any));
     if (!res.ok) {
       setErr(data?.error ?? "ログインに失敗しました");
       return;
     }
 
-    if (data?.token) setSessionToken(String(data.token));
-
-    if (nextPath) router.push(nextPath);
-    else router.push(data.role === "admin" ? "/admin" : "/buddy");
+    const target = nextPath ? nextPath : data.role === "admin" ? "/admin" : "/buddy";
+    router.replace(target);
   }
 
   return (

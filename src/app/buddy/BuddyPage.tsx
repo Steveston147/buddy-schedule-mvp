@@ -1,23 +1,11 @@
 "use client";
-
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authFetch, clearSessionToken } from "@/lib/clientSession";
 import { rehydrateTokenFromHash } from "@/lib/rehydrateToken";
+import { User, Assignment } from "./page";
 
-type User = { id: string; role: "admin" | "buddy"; email: string };
-
-type Assignment = {
-  id: string;
-  event: {
-    id?: string;
-    title: string;
-    type: "culture" | "japanese";
-    startAt: string;
-    meetingPlace: string;
-  };
-};
 
 export default function BuddyPage() {
   const router = useRouter();
@@ -32,6 +20,7 @@ export default function BuddyPage() {
 
     (async () => {
       try {
+        // 1) 誰としてログインしてるか確認
         const meRes = await authFetch("/api/auth/me");
         const meData = await meRes.json().catch(() => ({}));
         const u: User | null = meData.user ?? null;
@@ -42,6 +31,7 @@ export default function BuddyPage() {
           return;
         }
 
+        // adminなら admin へ（buddy画面には入れない）
         if (u.role === "admin") {
           router.replace("/admin");
           return;
@@ -49,11 +39,13 @@ export default function BuddyPage() {
 
         setUser(u);
 
+        // 2) その buddy のアサイン一覧を取得
         const aRes = await authFetch("/api/buddy/assignments");
         const aData = await aRes.json().catch(() => ({}));
 
         if (!aRes.ok) {
-          setErr(aData?.error ?? "Failed to load assignments");
+          const msg = aData?.error ?? "Failed to load assignments";
+          setErr(`${msg}`);
           setAssignments([]);
           setLoading(false);
           return;
@@ -64,6 +56,7 @@ export default function BuddyPage() {
       } catch {
         clearSessionToken();
         router.replace("/login?next=/buddy");
+        return;
       } finally {
         setLoading(false);
       }

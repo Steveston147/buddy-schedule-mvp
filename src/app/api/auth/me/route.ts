@@ -1,10 +1,15 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getAuthedUserFromRequest } from "@/lib/serverAuth";
+import { getSessionUserFromCookie } from "@/lib/authCookie";
 
-export async function GET(req: Request) {
-  const user = await getAuthedUserFromRequest(req);
-  if (!user) return NextResponse.json({ user: null }, { status: 200 });
-  return NextResponse.json({ user }, { status: 200 });
+export async function GET() {
+  // ✅ 重要: await を追加
+  const user = await getSessionUserFromCookie();
+
+  if (!user) {
+    return NextResponse.json({ user: null });
+  }
+
+  return NextResponse.json({ user });
 }

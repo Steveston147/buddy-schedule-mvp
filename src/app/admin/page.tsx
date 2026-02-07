@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authFetch, clearSessionToken } from "@/lib/clientSession";
+import { rehydrateTokenFromHash } from "@/lib/rehydrateToken";
 
 type User = { id: string; role: "admin" | "buddy"; email: string };
 
@@ -13,24 +14,32 @@ export default function AdminHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // ✅ StackBlitz対策：URL hash から token を復元
+    rehydrateTokenFromHash();
+
     (async () => {
-      const res = await authFetch("/api/auth/me");
-      const data = await res.json().catch(() => ({}));
-      const u: User | null = data.user ?? null;
+      try {
+        const res = await authFetch("/api/auth/me");
+        const data = await res.json().catch(() => ({}));
+        const u: User | null = data.user ?? null;
 
-      if (!u) {
-        setLoading(false);
+        if (!u) {
+          clearSessionToken();
+          router.replace("/login?next=/admin");
+          return;
+        }
+        if (u.role !== "admin") {
+          router.replace("/buddy");
+          return;
+        }
+
+        setUser(u);
+      } catch {
+        clearSessionToken();
         router.replace("/login?next=/admin");
-        return;
-      }
-      if (u.role !== "admin") {
+      } finally {
         setLoading(false);
-        router.replace("/buddy");
-        return;
       }
-
-      setUser(u);
-      setLoading(false);
     })();
   }, [router]);
 
@@ -39,33 +48,28 @@ export default function AdminHome() {
     router.replace("/login");
   }
 
-  if (loading) return <p>読み込み中...</p>;
+  if (loading) return <p style={{ padding: 16 }}>Loading...</p>;
   if (!user) return null;
 
   return (
-    <main>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h1>管理画面</h1>
-          <p style={{ color: "#666" }}>{user.email}</p>
-        </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button onClick={logout}>ログアウト</button>
-          <Link href="/">ホーム</Link>
-        </div>
-      </header>
+    <main style={{ padding: 16, display: "grid", gap: 12 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700 }}>Admin</h1>
 
-      <ul style={{ paddingLeft: 18, marginTop: 18 }}>
-        <li>
-          <Link href="/admin/events">イベント管理</Link>
-        </li>
-        <li>
-          <Link href="/admin/buddies">バディユーザー管理</Link>
-        </li>
-        <li>
-          <Link href="/admin/assignments">割り当て管理</Link>
-        </li>
-      </ul>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 12, opacity: 0.8 }}>Signed in as</div>
+          <div style={{ fontWeight: 600 }}>{user.email}</div>
+        </div>
+        <button onClick={logout} style={{ marginLeft: "auto" }}>
+          Logout
+        </button>
+      </div>
+
+      <nav style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <Link href="/admin/events">Events</Link>
+        <Link href="/admin/buddies">Buddies</Link>
+        <Link href="/admin/assignments">Assignments</Link>
+      </nav>
     </main>
   );
 }
